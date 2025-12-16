@@ -42,14 +42,14 @@
 
         #ui {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
+            top: 5px;
+            left: 5px;
+            right: 5px;
             color: white;
             font-size: 18px;
             display: flex;
             justify-content: space-between;
-            padding: 10px;
+            padding: 5px;
             background: rgba(0, 0, 0, 0.5);
             border-radius: 10px;
             z-index: 10;
@@ -549,9 +549,9 @@
         function checkParked(car, spot) {
             const dx = Math.abs(car.x - spot.x);
             const dy = Math.abs(car.y - spot.y);
-            const angleAligned = Math.abs(car.angle % (Math.PI * 2)) < 0.3 ||
-                                Math.abs(car.angle % (Math.PI * 2)) > Math.PI * 2 - 0.3;
-            return dx < 20 && dy < 20 && angleAligned && Math.abs(car.speed) < 0.5;
+            const angleAligned = Math.abs(car.angle % (Math.PI * 2)) < 0.5 ||
+                                Math.abs(car.angle % (Math.PI * 2)) > Math.PI * 2 - 0.5;
+            return dx < 35 && dy < 35 && angleAligned && Math.abs(car.speed) < 1.0;
         }
 
         // Draw game
