@@ -28,16 +28,18 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            padding-top: 5px;
         }
 
         #gameCanvas {
             background: #2d3436;
             border: 3px solid #fff;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            max-width: 100%;
-            max-height: 80vh;
+            max-width: calc(100% - 10px);
+            max-height: calc(100vh - 250px);
             display: block;
+            margin-top: 40px;
         }
 
         #ui {
@@ -151,18 +153,18 @@
 
         /* Virtual Joystick */
         #joystickContainer {
-            position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 150px;
-            height: 150px;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
             z-index: 10;
         }
 
         #joystickBase {
             position: absolute;
-            width: 150px;
-            height: 150px;
+            width: 120px;
+            height: 120px;
             background: rgba(255, 255, 255, 0.1);
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
@@ -171,23 +173,23 @@
 
         #joystickStick {
             position: absolute;
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: rgba(255, 255, 255, 0.5);
             border: 3px solid white;
             border-radius: 50%;
-            left: 45px;
-            top: 45px;
+            left: 35px;
+            top: 35px;
             backdrop-filter: blur(10px);
             transition: all 0.1s;
         }
 
         #accelerateZone {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 150px;
-            height: 200px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            height: 160px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -341,7 +343,7 @@
             const brakeBtn = document.getElementById('brakeBtn');
 
             let joystickTouch = null;
-            const maxDistance = 45;
+            const maxDistance = 35;
 
             // Joystick handlers
             function handleJoystickStart(e) {
@@ -365,8 +367,8 @@
                 joystick.x = 0;
                 joystick.y = 0;
                 joystick.power = 0;
-                joystickStick.style.left = '45px';
-                joystickStick.style.top = '45px';
+                joystickStick.style.left = '35px';
+                joystickStick.style.top = '35px';
                 keys.left = false;
                 keys.right = false;
             }
@@ -392,8 +394,8 @@
                 joystick.angle = angle;
                 joystick.power = Math.min(distance / maxDistance, 1);
 
-                joystickStick.style.left = (45 + deltaX) + 'px';
-                joystickStick.style.top = (45 + deltaY) + 'px';
+                joystickStick.style.left = (35 + deltaX) + 'px';
+                joystickStick.style.top = (35 + deltaY) + 'px';
 
                 // Update keys based on joystick position
                 keys.left = deltaX < -10;
@@ -488,7 +490,7 @@
             }
 
             // Reset timer
-            timeLeft = Math.max(60 - level * 2, 30);
+            timeLeft = Math.max(120 - level * 2, 60);
         }
 
         // Update game
@@ -505,11 +507,12 @@
             }
 
             if (Math.abs(car.speed) > 0.1) {
+                const turnDirection = car.speed > 0 ? 1 : -1;
                 if (keys.left) {
-                    car.angle -= car.turnSpeed * Math.abs(car.speed) / car.maxSpeed;
+                    car.angle -= car.turnSpeed * turnDirection * Math.abs(car.speed) / car.maxSpeed;
                 }
                 if (keys.right) {
-                    car.angle += car.turnSpeed * Math.abs(car.speed) / car.maxSpeed;
+                    car.angle += car.turnSpeed * turnDirection * Math.abs(car.speed) / car.maxSpeed;
                 }
             }
 
