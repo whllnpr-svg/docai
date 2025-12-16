@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>极限停车场 - Extreme Parking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas {
+            background: #2d3436;
+            border: 3px solid #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+            max-height: 80vh;
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            color: white;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid white;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.1s;
+        }
+
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+
+        #menuScreen, #gameOverScreen, #levelCompleteScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .screen-title {
+            font-size: 48px;
+            color: #ffd700;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .menu-btn {
+            padding: 15px 40px;
+            margin: 10px;
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .menu-btn:active {
+            transform: scale(0.95);
+        }
+
+        .stats {
+            color: white;
+            font-size: 20px;
+            margin: 10px;
+        }
+
+        #gameOverScreen, #levelCompleteScreen {
+            display: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #instructions {
+            color: #ddd;
+            font-size: 16px;
+            text-align: center;
+            max-width: 80%;
+            margin: 20px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Menu Screen -->
+        <div id="menuScreen">
+            <h1 class="screen-title">🚗 极限停车场 🚗</h1>
+            <div id="instructions">
+                将汽车安全停入停车位！<br>
+                避开障碍物，小心驾驶！<br>
+                使用屏幕下方的按钮控制汽车
+            </div>
+            <button class="menu-btn" onclick="startGame()">开始游戏</button>
+            <div class="stats">最高关卡: <span id="bestLevel">1</span></div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <h1 class="screen-title">游戏结束!</h1>
+            <div class="stats">关卡: <span id="finalLevel">1</span></div>
+            <div class="stats">得分: <span id="finalScore">0</span></div>
+            <button class="menu-btn" onclick="restartGame()">重新开始</button>
+            <button class="menu-btn" onclick="backToMenu()">返回菜单</button>
+        </div>
+
+        <!-- Level Complete Screen -->
+        <div id="levelCompleteScreen">
+            <h1 class="screen-title">关卡完成! 🎉</h1>
+            <div class="stats">得分: +<span id="levelScore">100</span></div>
+            <div class="stats">下一关: <span id="nextLevel">2</span></div>
+            <button class="menu-btn" onclick="nextLevel()">继续</button>
+        </div>
+
+        <!-- UI -->
+        <div id="ui" class="hidden">
+            <div>关卡: <span id="level">1</span></div>
+            <div>得分: <span id="score">0</span></div>
+            <div>时间: <span id="timer">60</span>s</div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Controls -->
+        <div id="controls" class="hidden">
+            <div class="control-btn" id="leftBtn">←</div>
+            <div class="control-btn" id="upBtn">↑</div>
+            <div class="control-btn" id="downBtn">↓</div>
+            <div class="control-btn" id="rightBtn">→</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas() {
+            const maxWidth = Math.min(window.innerWidth - 20, 800);
+            const maxHeight = Math.min(window.innerHeight * 0.7, 600);
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Game state
+        let gameState = 'menu';
+        let level = 1;
+        let score = 0;
+        let bestLevel = localStorage.getItem('bestLevel') || 1;
+        let timeLeft = 60;
+        let gameTimer = null;
+
+        // Car object
+        const car = {
+            x: 50,
+            y: 50,
+            width: 30,
+            height: 50,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 3,
+            acceleration: 0.2,
+            friction: 0.95,
+            turnSpeed: 0.05,
+            color: '#e74c3c'
+        };
+
+        // Parking spot
+        let parkingSpot = {
+            x: 0,
+            y: 0,
+            width: 40,
+            height: 60,
+            color: '#2ecc71'
+        };
+
+        // Obstacles
+        let obstacles = [];
+
+        // Controls
+        const keys = {
+            left: false,
+            right: false,
+            up: false,
+            down: false
+        };
+
+        // Touch controls
+        function setupControls() {
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const upBtn = document.getElementById('upBtn');
+            const downBtn = document.getElementById('downBtn');
+
+            function addControl(btn, key) {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    keys[key] = true;
+                });
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    keys[key] = false;
+                });
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    keys[key] = true;
+                });
+                btn.addEventListener('mouseup', (e) => {
+                    e.preventDefault();
+                    keys[key] = false;
+                });
+            }
+
+            addControl(leftBtn, 'left');
+            addControl(rightBtn, 'right');
+            addControl(upBtn, 'up');
+            addControl(downBtn, 'down');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowUp') keys.up = true;
+            if (e.key === 'ArrowDown') keys.down = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowUp') keys.up = false;
+            if (e.key === 'ArrowDown') keys.down = false;
+        });
+
+        // Initialize level
+        function initLevel() {
+            // Reset car position
+            car.x = 50;
+            car.y = canvas.height / 2;
+            car.angle = 0;
+            car.speed = 0;
+
+            // Set parking spot
+            parkingSpot.x = canvas.width - 100;
+            parkingSpot.y = canvas.height - 100;
+
+            // Create obstacles based on level
+            obstacles = [];
+            const numObstacles = Math.min(3 + level, 10);
+
+            for (let i = 0; i < numObstacles; i++) {
+                let validPosition = false;
+                let obstacle;
+
+                while (!validPosition) {
+                    obstacle = {
+                        x: Math.random() * (canvas.width - 100) + 50,
+                        y: Math.random() * (canvas.height - 100) + 50,
+                        width: 30 + Math.random() * 30,
+                        height: 30 + Math.random() * 30,
+                        color: '#95a5a6'
+                    };
+
+                    // Check if obstacle is too close to car or parking spot
+                    const carDist = Math.hypot(obstacle.x - car.x, obstacle.y - car.y);
+                    const parkDist = Math.hypot(obstacle.x - parkingSpot.x, obstacle.y - parkingSpot.y);
+
+                    if (carDist > 100 && parkDist > 100) {
+                        validPosition = true;
+                    }
+                }
+
+                obstacles.push(obstacle);
+            }
+
+            // Reset timer
+            timeLeft = Math.max(60 - level * 2, 30);
+        }
+
+        // Update game
+        function update() {
+            if (gameState !== 'playing') return;
+
+            // Update car movement
+            if (keys.up) {
+                car.speed = Math.min(car.speed + car.acceleration, car.maxSpeed);
+            } else if (keys.down) {
+                car.speed = Math.max(car.speed - car.acceleration, -car.maxSpeed * 0.5);
+            } else {
+                car.speed *= car.friction;
+            }
+
+            if (Math.abs(car.speed) > 0.1) {
+                if (keys.left) {
+                    car.angle -= car.turnSpeed * Math.abs(car.speed) / car.maxSpeed;
+                }
+                if (keys.right) {
+                    car.angle += car.turnSpeed * Math.abs(car.speed) / car.maxSpeed;
+                }
+            }
+
+            // Update position
+            car.x += Math.sin(car.angle) * car.speed;
+            car.y -= Math.cos(car.angle) * car.speed;
+
+            // Boundary collision
+            if (car.x < 0 || car.x > canvas.width || car.y < 0 || car.y > canvas.height) {
+                gameOver();
+                return;
+            }
+
+            // Obstacle collision
+            for (let obs of obstacles) {
+                if (checkCollision(car, obs)) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // Check if parked
+            if (checkParked(car, parkingSpot)) {
+                levelComplete();
+            }
+        }
+
+        // Check collision between car and obstacle
+        function checkCollision(car, obstacle) {
+            const carRadius = Math.sqrt(car.width * car.width + car.height * car.height) / 2;
+            const obsRadius = Math.sqrt(obstacle.width * obstacle.width + obstacle.height * obstacle.height) / 2;
+            const dist = Math.hypot(car.x - obstacle.x, car.y - obstacle.y);
+            return dist < (carRadius + obsRadius) * 0.7;
+        }
+
+        // Check if car is parked
+        function checkParked(car, spot) {
+            const dx = Math.abs(car.x - spot.x);
+            const dy = Math.abs(car.y - spot.y);
+            const angleAligned = Math.abs(car.angle % (Math.PI * 2)) < 0.3 ||
+                                Math.abs(car.angle % (Math.PI * 2)) > Math.PI * 2 - 0.3;
+            return dx < 20 && dy < 20 && angleAligned && Math.abs(car.speed) < 0.5;
+        }
+
+        // Draw game
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#2d3436';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = '#34495e';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Draw parking spot
+            ctx.save();
+            ctx.fillStyle = parkingSpot.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(parkingSpot.x - parkingSpot.width/2, parkingSpot.y - parkingSpot.height/2,
+                        parkingSpot.width, parkingSpot.height);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = parkingSpot.color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(parkingSpot.x - parkingSpot.width/2, parkingSpot.y - parkingSpot.height/2,
+                          parkingSpot.width, parkingSpot.height);
+            ctx.setLineDash([]);
+
+            // Draw "P" symbol
+            ctx.fillStyle = parkingSpot.color;
+            ctx.font = 'bold 30px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', parkingSpot.x, parkingSpot.y);
+            ctx.restore();
+
+            // Draw obstacles
+            ctx.fillStyle = '#95a5a6';
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x - obs.width/2, obs.y - obs.height/2, obs.width, obs.height);
+                ctx.strokeStyle = '#7f8c8d';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(obs.x - obs.width/2, obs.y - obs.height/2, obs.width, obs.height);
+            }
+
+            // Draw car
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Car body
+            ctx.fillStyle = car.color;
+            ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+
+            // Car window
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(-car.width/2 + 5, -car.height/2 + 5, car.width - 10, car.height/3);
+
+            // Car outline
+            ctx.strokeStyle = '#c0392b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-car.width/2, -car.height/2, car.width, car.height);
+
+            // Headlights
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(-car.width/2 + 3, -car.height/2 - 2, 8, 2);
+            ctx.fillRect(car.width/2 - 11, -car.height/2 - 2, 8, 2);
+
+            ctx.restore();
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        function startGame() {
+            gameState = 'playing';
+            level = 1;
+            score = 0;
+
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('ui').classList.remove('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+
+            initLevel();
+            updateUI();
+            startTimer();
+        }
+
+        // Restart game
+        function restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            startGame();
+        }
+
+        // Back to menu
+        function backToMenu() {
+            gameState = 'menu';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('ui').classList.add('hidden');
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('menuScreen').classList.remove('hidden');
+
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+        }
+
+        // Next level
+        function nextLevel() {
+            level++;
+            score += 100 + level * 50;
+
+            if (level > bestLevel) {
+                bestLevel = level;
+                localStorage.setItem('bestLevel', bestLevel);
+                document.getElementById('bestLevel').textContent = bestLevel;
+            }
+
+            document.getElementById('levelCompleteScreen').style.display = 'none';
+            gameState = 'playing';
+
+            initLevel();
+            updateUI();
+            startTimer();
+        }
+
+        // Level complete
+        function levelComplete() {
+            gameState = 'paused';
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+
+            const levelBonus = 100 + level * 50;
+            const timeBonus = timeLeft * 10;
+            const totalBonus = levelBonus + timeBonus;
+
+            document.getElementById('levelScore').textContent = totalBonus;
+            document.getElementById('nextLevel').textContent = level + 1;
+            document.getElementById('levelCompleteScreen').style.display = 'flex';
+        }
+
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('level').textContent = level;
+            document.getElementById('score').textContent = score;
+            document.getElementById('timer').textContent = timeLeft;
+            document.getElementById('bestLevel').textContent = bestLevel;
+        }
+
+        // Timer
+        function startTimer() {
+            if (gameTimer) {
+                clearInterval(gameTimer);
+            }
+
+            gameTimer = setInterval(() => {
+                if (gameState === 'playing') {
+                    timeLeft--;
+                    updateUI();
+
+                    if (timeLeft <= 0) {
+                        gameOver();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Initialize
+        setupControls();
+        gameLoop();
+        updateUI();
+    </script>
+</body>
+</html>
