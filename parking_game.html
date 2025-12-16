@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>停车小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        #gameCanvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            background: #2d2d2d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .controls h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .key {
+            background: #667eea;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .failure {
+            color: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🚗 停车小游戏</h1>
+
+        <div class="info-panel">
+            <div class="info-item">
+                <span class="info-label">关卡</span>
+                <span class="info-value" id="level">1</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">得分</span>
+                <span class="info-value" id="score">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">剩余时间</span>
+                <span class="info-value" id="timer">60</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="controls">
+            <h3>🎮 游戏控制</h3>
+            <div class="controls-grid">
+                <div class="control-item">
+                    <span class="key">↑</span>
+                    <span>前进</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">↓</span>
+                    <span>后退</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">←</span>
+                    <span>左转</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">→</span>
+                    <span>右转</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button onclick="game.start()">开始游戏</button>
+            <button onclick="game.reset()">重新开始</button>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2>
+            <p id="modalMessage"></p>
+            <button onclick="game.closeModal()">继续</button>
+        </div>
+    </div>
+
+    <script>
+        class ParkingGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.level = 1;
+                this.score = 0;
+                this.timeLimit = 60;
+                this.timeLeft = this.timeLimit;
+                this.gameRunning = false;
+                this.gameTimer = null;
+
+                // 车辆属性
+                this.car = {
+                    x: 100,
+                    y: 500,
+                    width: 40,
+                    height: 70,
+                    angle: 0,
+                    speed: 0,
+                    maxSpeed: 3,
+                    turnSpeed: 0.05
+                };
+
+                // 停车位
+                this.parkingSpot = {
+                    x: 650,
+                    y: 100,
+                    width: 50,
+                    height: 80
+                };
+
+                // 障碍物
+                this.obstacles = [];
+                this.initObstacles();
+
+                // 键盘控制
+                this.keys = {};
+                this.setupControls();
+            }
+
+            initObstacles() {
+                this.obstacles = [
+                    // 墙壁
+                    { x: 0, y: 0, width: 800, height: 20 },
+                    { x: 0, y: 0, width: 20, height: 600 },
+                    { x: 780, y: 0, width: 20, height: 600 },
+                    { x: 0, y: 580, width: 800, height: 20 },
+
+                    // 停车场障碍物
+                    { x: 200, y: 200, width: 50, height: 80 },
+                    { x: 300, y: 200, width: 50, height: 80 },
+                    { x: 400, y: 200, width: 50, height: 80 },
+                    { x: 500, y: 200, width: 50, height: 80 },
+
+                    { x: 200, y: 350, width: 50, height: 80 },
+                    { x: 300, y: 350, width: 50, height: 80 },
+                    { x: 400, y: 350, width: 50, height: 80 },
+                    { x: 500, y: 350, width: 50, height: 80 }
+                ];
+            }
+
+            setupControls() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+            }
+
+            start() {
+                if (this.gameRunning) return;
+
+                this.gameRunning = true;
+                this.timeLeft = this.timeLimit;
+                this.updateUI();
+
+                // 开始游戏循环
+                this.gameLoop();
+
+                // 开始计时器
+                this.gameTimer = setInterval(() => {
+                    this.timeLeft--;
+                    document.getElementById('timer').textContent = this.timeLeft;
+
+                    if (this.timeLeft <= 0) {
+                        this.endGame(false, '时间到！停车失败！');
+                    }
+                }, 1000);
+            }
+
+            reset() {
+                this.car.x = 100;
+                this.car.y = 500;
+                this.car.angle = 0;
+                this.car.speed = 0;
+                this.gameRunning = false;
+                this.timeLeft = this.timeLimit;
+
+                if (this.gameTimer) {
+                    clearInterval(this.gameTimer);
+                }
+
+                this.updateUI();
+                this.draw();
+            }
+
+            gameLoop() {
+                if (!this.gameRunning) return;
+
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            update() {
+                // 控制车辆
+                if (this.keys['ArrowUp']) {
+                    this.car.speed = Math.min(this.car.speed + 0.2, this.car.maxSpeed);
+                } else if (this.keys['ArrowDown']) {
+                    this.car.speed = Math.max(this.car.speed - 0.2, -this.car.maxSpeed);
+                } else {
+                    this.car.speed *= 0.95; // 摩擦力
+                }
+
+                if (this.keys['ArrowLeft']) {
+                    this.car.angle -= this.car.turnSpeed * Math.abs(this.car.speed);
+                }
+                if (this.keys['ArrowRight']) {
+                    this.car.angle += this.car.turnSpeed * Math.abs(this.car.speed);
+                }
+
+                // 更新车辆位置
+                const newX = this.car.x + Math.sin(this.car.angle) * this.car.speed;
+                const newY = this.car.y - Math.cos(this.car.angle) * this.car.speed;
+
+                // 碰撞检测
+                this.car.x = newX;
+                this.car.y = newY;
+
+                if (this.checkCollision()) {
+                    // 撞到障碍物，回退
+                    this.car.x -= Math.sin(this.car.angle) * this.car.speed;
+                    this.car.y += Math.cos(this.car.angle) * this.car.speed;
+                    this.car.speed = 0;
+                    this.endGame(false, '撞到障碍物了！停车失败！');
+                }
+
+                // 检查是否成功停车
+                if (this.checkParking()) {
+                    this.endGame(true, `恭喜！成功停车！<br>用时：${this.timeLimit - this.timeLeft}秒`);
+                }
+            }
+
+            checkCollision() {
+                const carCorners = this.getCarCorners();
+
+                for (let obstacle of this.obstacles) {
+                    if (this.polygonRectCollision(carCorners, obstacle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            checkParking() {
+                const carCorners = this.getCarCorners();
+                const spot = this.parkingSpot;
+
+                // 检查车辆是否完全在停车位内
+                for (let corner of carCorners) {
+                    if (corner.x < spot.x || corner.x > spot.x + spot.width ||
+                        corner.y < spot.y || corner.y > spot.y + spot.height) {
+                        return false;
+                    }
+                }
+
+                // 检查车辆角度是否接近垂直
+                const normalizedAngle = ((this.car.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                const angleDiff = Math.min(
+                    Math.abs(normalizedAngle),
+                    Math.abs(normalizedAngle - Math.PI * 2)
+                );
+
+                return angleDiff < 0.2; // 允许小角度偏差
+            }
+
+            getCarCorners() {
+                const corners = [];
+                const halfW = this.car.width / 2;
+                const halfH = this.car.height / 2;
+
+                const localCorners = [
+                    { x: -halfW, y: -halfH },
+                    { x: halfW, y: -halfH },
+                    { x: halfW, y: halfH },
+                    { x: -halfW, y: halfH }
+                ];
+
+                for (let corner of localCorners) {
+                    const rotatedX = corner.x * Math.cos(this.car.angle) - corner.y * Math.sin(this.car.angle);
+                    const rotatedY = corner.x * Math.sin(this.car.angle) + corner.y * Math.cos(this.car.angle);
+
+                    corners.push({
+                        x: this.car.x + rotatedX,
+                        y: this.car.y + rotatedY
+                    });
+                }
+
+                return corners;
+            }
+
+            polygonRectCollision(polygon, rect) {
+                // 简化的碰撞检测
+                for (let point of polygon) {
+                    if (point.x >= rect.x && point.x <= rect.x + rect.width &&
+                        point.y >= rect.y && point.y <= rect.y + rect.height) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            draw() {
+                // 清空画布
+                this.ctx.fillStyle = '#2d2d2d';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 绘制网格
+                this.ctx.strokeStyle = '#3d3d3d';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i < this.canvas.width; i += 40) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(i, 0);
+                    this.ctx.lineTo(i, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                for (let i = 0; i < this.canvas.height; i += 40) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, i);
+                    this.ctx.lineTo(this.canvas.width, i);
+                    this.ctx.stroke();
+                }
+
+                // 绘制停车位
+                this.ctx.fillStyle = '#4ade80';
+                this.ctx.fillRect(
+                    this.parkingSpot.x,
+                    this.parkingSpot.y,
+                    this.parkingSpot.width,
+                    this.parkingSpot.height
+                );
+                this.ctx.strokeStyle = '#22c55e';
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(
+                    this.parkingSpot.x,
+                    this.parkingSpot.y,
+                    this.parkingSpot.width,
+                    this.parkingSpot.height
+                );
+
+                // 绘制停车位文字
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('P', this.parkingSpot.x + this.parkingSpot.width / 2, this.parkingSpot.y + this.parkingSpot.height / 2);
+
+                // 绘制障碍物
+                this.ctx.fillStyle = '#ef4444';
+                for (let obstacle of this.obstacles) {
+                    this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                }
+
+                // 绘制车辆
+                this.ctx.save();
+                this.ctx.translate(this.car.x, this.car.y);
+                this.ctx.rotate(this.car.angle);
+
+                // 车身
+                this.ctx.fillStyle = '#3b82f6';
+                this.ctx.fillRect(-this.car.width / 2, -this.car.height / 2, this.car.width, this.car.height);
+
+                // 车窗
+                this.ctx.fillStyle = '#60a5fa';
+                this.ctx.fillRect(-this.car.width / 2 + 5, -this.car.height / 2 + 5, this.car.width - 10, 20);
+
+                // 车头指示
+                this.ctx.fillStyle = '#fbbf24';
+                this.ctx.fillRect(-this.car.width / 2 + 5, -this.car.height / 2, this.car.width - 10, 5);
+
+                this.ctx.restore();
+            }
+
+            endGame(success, message) {
+                this.gameRunning = false;
+
+                if (this.gameTimer) {
+                    clearInterval(this.gameTimer);
+                }
+
+                if (success) {
+                    this.score += 100 + this.timeLeft * 10;
+                    this.level++;
+                    this.updateUI();
+                }
+
+                this.showModal(success, message);
+            }
+
+            showModal(success, message) {
+                const modal = document.getElementById('modal');
+                const title = document.getElementById('modalTitle');
+                const messageEl = document.getElementById('modalMessage');
+
+                title.textContent = success ? '🎉 成功！' : '😢 失败！';
+                title.className = success ? 'success' : 'failure';
+                messageEl.innerHTML = message;
+
+                modal.style.display = 'flex';
+            }
+
+            closeModal() {
+                document.getElementById('modal').style.display = 'none';
+                this.reset();
+            }
+
+            updateUI() {
+                document.getElementById('level').textContent = this.level;
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('timer').textContent = this.timeLeft;
+            }
+        }
+
+        // 创建游戏实例
+        const game = new ParkingGame();
+        game.draw();
+    </script>
+</body>
+</html>
